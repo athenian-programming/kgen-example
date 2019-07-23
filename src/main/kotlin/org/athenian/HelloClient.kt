@@ -81,10 +81,8 @@ class HelloClient {
                     }
             }
 
-            runBlocking {
-                sender.join()
-                receiver.join()
-            }
+            sender.join()
+            receiver.join()
 
             client.shutdownChannel()
         }
