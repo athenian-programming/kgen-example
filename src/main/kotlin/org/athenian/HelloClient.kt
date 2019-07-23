@@ -2,6 +2,7 @@ package org.athenian
 
 import io.grpc.ManagedChannelBuilder
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
@@ -20,69 +21,71 @@ class HelloClient {
         }
     }
 
-    fun runExample() = runBlocking {
-        val client =
-            HelloServiceClient.create(
-                channel = ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext().build()
-            )
-
-        val result1 =
-            client.hiThere(
-                hiRequest {
-                    query = "Hello!"
-                    tags = listOf("greeting", "salutation")
-                    flags = mapOf(
-                        "hello" to "hi",
-                        "later" to "bye"
-                    )
-                })
-
-        println("The response was: ${result1.result}")
-
-
-        val call1 = client.hiThereWithManyRequests()
-        repeat(3) {
-            call1.requests.send(
-                hiRequest {
-                    query = "Hello Again!"
-                })
-        }
-        call1.requests.close()
-        val result2 = call1.response.await()
-        println("Result2 = ${result2.result}")
-
-        val call2 = client.hiThereWithManyReponses(hiRequest { query = "Bill" })
-        for (resp in call2.responses) {
-            println("Result3 = ${resp.result}")
-        }
-
-        val call3 = client.hiThereWithManyRequestsAndManyReponses()
-
-        val sender = async {
-            repeat(5) {
-                call3.requests.send(
-                    hiRequest {
-                        query = "Hello Again!"
-                    }
-                )
-                println("Sent val in async")
-                delay(1_000)
-            }
-            call3.requests.close()
-        }
-
-        val receiver = async {
-            for (resp in call3.responses) {
-                println("Result4 in async = ${resp.result}")
-                delay(1_000)
-            }
-        }
-
+    fun runExample() =
         runBlocking {
-            sender.join()
-            receiver.join()
-        }
+            val client =
+                HelloServiceClient.create(
+                    channel = ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext().build()
+                )
 
-        client.shutdownChannel()
-    }
+            val syncResponse =
+                client.hiThere(
+                    hiRequest {
+                        query = "Hello!"
+                        tags = listOf("greeting", "salutation")
+                        flags = mapOf(
+                            "hello" to "hi",
+                            "later" to "bye"
+                        )
+                    })
+
+            println("Sync response was: ${syncResponse.result}")
+
+
+            val streamingClientCall = client.hiThereWithManyRequests()
+            repeat(3) {
+                streamingClientCall.requests.send(
+                    hiRequest {
+                        query = "Hello Again! $it"
+                    })
+            }
+            streamingClientCall.requests.close()
+            val streamingClientResult = streamingClientCall.response.await()
+            println("Streaming Client result = ${streamingClientResult.result}")
+
+            val streamingServerCall = client.hiThereWithManyReponses(hiRequest { query = "Bill" })
+            for (resp in streamingServerCall.responses)
+                println("Streaming Server result = ${resp.result}")
+
+            val bidirectionalCall = client.hiThereWithManyRequestsAndManyReponses()
+
+            val sender = async {
+                repeat(5) {
+                    bidirectionalCall.requests.send(
+                        hiRequest {
+                            query = "Hello val $it"
+                        }
+                    )
+                    println("Sent val in async")
+                    delay(1_000)
+                }
+                bidirectionalCall.requests.close()
+            }
+
+            val receiver = async {
+                bidirectionalCall
+                    .responses
+                    .consumeEach {
+                        println("Async response from server = ${it.result}")
+                        delay(1_000)
+                    }
+            }
+
+            runBlocking {
+                sender.join()
+                receiver.join()
+            }
+
+            client.shutdownChannel()
+        }
 }
