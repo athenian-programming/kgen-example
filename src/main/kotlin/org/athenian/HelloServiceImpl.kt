@@ -57,21 +57,17 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
         responseObserver?.onCompleted()
     }
 
-    override fun hiThereWithManyRequestsAndManyReponses(responseObserver: StreamObserver<HiResponse>?): StreamObserver<HiRequest> {
-        repeat(5) {
-            val reply =
-                HiResponse.newBuilder()
-                    .apply { result = "Hello there [$it]" }
-                    .build()
-            responseObserver?.onNext(reply)
-        }
-        responseObserver?.onCompleted()
-
-        return object : StreamObserver<HiRequest> {
-            val names: MutableList<String> = mutableListOf()
-
+    override fun hiThereWithManyRequestsAndManyReponses(responseObserver: StreamObserver<HiResponse>) =
+        object : StreamObserver<HiRequest> {
             override fun onNext(request: HiRequest) {
-                names.add(request.query)
+                repeat(5) {
+                    val reply =
+                        HiResponse
+                            .newBuilder()
+                            .apply { result = "Hello ${request.query} [$it]" }
+                            .build()
+                    responseObserver.onNext(reply)
+                }
             }
 
             override fun onError(t: Throwable) {
@@ -80,16 +76,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
 
             override fun onCompleted() {
-                val msg =
-                    HiResponse.newBuilder()
-                        .apply { result = "Hello ${names.joinToString(", ")}" }
-                        .build()
-                responseObserver
-                    ?.apply {
-                        onNext(msg)
-                        onCompleted()
-                    }
+                responseObserver.onCompleted()
             }
         }
-    }
 }

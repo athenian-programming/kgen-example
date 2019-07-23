@@ -1,6 +1,8 @@
 package org.athenian
 
 import io.grpc.ManagedChannelBuilder
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 
 class HelloClient {
@@ -55,17 +57,31 @@ class HelloClient {
         }
 
         val call3 = client.hiThereWithManyRequestsAndManyReponses()
-        repeat(3) {
-            call3.requests.send(
-                hiRequest {
-                    query = "Hello Again!"
-                })
-        }
-        call3.requests.close()
-        for (resp in call3.responses) {
-            println("Result4 = ${resp.result}")
+
+        val sender = async {
+            repeat(5) {
+                call3.requests.send(
+                    hiRequest {
+                        query = "Hello Again!"
+                    }
+                )
+                println("Sent val in async")
+                delay(1_000)
+            }
+            call3.requests.close()
         }
 
+        val receiver = async {
+            for (resp in call3.responses) {
+                println("Result4 in async = ${resp.result}")
+                delay(1_000)
+            }
+        }
+
+        runBlocking {
+            sender.join()
+            receiver.join()
+        }
 
         client.shutdownChannel()
     }
