@@ -5,22 +5,19 @@ import io.grpc.ServerBuilder
 import io.grpc.protobuf.services.ProtoReflectionService
 import java.io.IOException
 
-class HelloServer(private val port: Int = 8080) {
-    companion object {
-        @JvmStatic
-        @Throws(IOException::class, InterruptedException::class)
-        fun main(args: Array<String>) {
-            HelloServer().apply {
-                start()
-                server?.awaitTermination()
-            }
-        }
+fun main() {
+    HelloServer().apply {
+        start()
+        server?.awaitTermination()
     }
+}
 
-    private var server: Server? = null
+class HelloServer(private val port: Int = 8080) {
+
+    var server: Server? = null
 
     @Throws(IOException::class)
-    private fun start() {
+    fun start() {
         server = ServerBuilder.forPort(port)
             .addService(HelloServiceImpl())
             .addService(ProtoReflectionService.newInstance())

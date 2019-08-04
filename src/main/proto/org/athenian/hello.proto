@@ -7,8 +7,8 @@ option java_multiple_files = true;
 service HelloService {
     rpc HiThere (HiRequest) returns (HiResponse);
     rpc HiThereWithManyRequests (stream HiRequest) returns (HiResponse);
-    rpc HiThereWithManyReponses (HiRequest) returns (stream HiResponse);
-    rpc HiThereWithManyRequestsAndManyReponses (stream HiRequest) returns (stream HiResponse);
+    rpc HiThereWithManyResponses (HiRequest) returns (stream HiResponse);
+    rpc HiThereWithManyRequestsAndManyResponses (stream HiRequest) returns (stream HiResponse);
 }
 
 message HiRequest {

@@ -1,89 +1,95 @@
 package org.athenian
 
 import io.grpc.ManagedChannelBuilder
-import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
+import kotlin.system.exitProcess
 
-class HelloClient {
+fun main() {
+    try {
+        val client =
+            HelloServiceClient.create(
+                channel = ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext().build()
+            )
 
-    companion object {
-        @JvmStatic
-        fun main(args: Array<String>) {
-            try {
-                HelloClient().runExample()
-                System.exit(0)
-            } catch (t: Throwable) {
-                System.err.println("Failed: $t")
-            }
-            System.exit(1)
-        }
+        syncClient(client)
+        streamingClient(client)
+        streamingServer(client)
+        bidirectionalService(client)
+        client.shutdownChannel()
+
+        exitProcess(0)
+    } catch (t: Throwable) {
+        System.err.println("Failed: $t")
     }
+    exitProcess(1)
+}
 
-    fun runExample() =
-        runBlocking {
-            val client =
-                HelloServiceClient.create(
-                    channel = ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext().build()
-                )
+fun syncClient(client: HelloServiceClient) {
 
-            val syncResponse =
-                client.hiThere(
-                    hiRequest {
-                        query = "Hello!"
-                        tags = listOf("greeting", "salutation")
-                        flags = mapOf(
-                            "hello" to "hi",
-                            "later" to "bye"
-                        )
-                    })
+    runBlocking {
+        val syncResponse =
+            client.hiThere(
+                hiRequest {
+                    query = "Hello!"
+                    tags = listOf("greeting", "salutation")
+                    flags = mapOf("hello" to "hi", "later" to "bye")
+                })
+        println("Sync response was: ${syncResponse.result}")
+    }
+}
 
-            println("Sync response was: ${syncResponse.result}")
+fun streamingClient(client: HelloServiceClient) {
+    runBlocking {
+        val streamingCall = client.hiThereWithManyRequests()
 
-
-            val streamingClientCall = client.hiThereWithManyRequests()
-            repeat(3) {
-                streamingClientCall.requests.send(
-                    hiRequest {
-                        query = "Hello Again! $it"
-                    })
+        launch {
+            repeat(5) {
+                streamingCall.requests.send(hiRequest { query = "Hello Again! $it" })
             }
-            streamingClientCall.requests.close()
-            val streamingClientResult = streamingClientCall.response.await()
-            println("Streaming Client result = ${streamingClientResult.result}")
+            streamingCall.requests.close()
+        }
 
-            val streamingServerCall = client.hiThereWithManyReponses(hiRequest { query = "Bill" })
-            for (resp in streamingServerCall.responses)
-                println("Streaming Server result = ${resp.result}")
+        val result = streamingCall.response.await()
+        println("Streaming Client result = ${result.result}")
+    }
+}
 
-            val bidirectionalCall = client.hiThereWithManyRequestsAndManyReponses()
+fun streamingServer(client: HelloServiceClient) {
+    runBlocking {
+        val streamingServerCall = client.hiThereWithManyResponses(hiRequest { query = "Bill" })
+        for (resp in streamingServerCall.responses)
+            println("Streaming Server result = ${resp.result}")
+    }
+}
 
-            val sender = async {
-                repeat(5) {
-                    bidirectionalCall.requests.send(
+fun bidirectionalService(client: HelloServiceClient) {
+    runBlocking {
+
+        val bidirectionalCall = client.hiThereWithManyRequestsAndManyResponses()
+
+        launch {
+            repeat(5) {
+                val s = "Mary $it"
+                bidirectionalCall.requests
+                    .send(
                         hiRequest {
-                            query = "Hello val $it"
+                            query = s
                         }
                     )
-                    println("Sent val in async")
-                    delay(1_000)
-                }
-                bidirectionalCall.requests.close()
+                println("Async client sent $s")
+                delay(Random.nextLong(1000))
             }
-
-            val receiver = async {
-                bidirectionalCall
-                    .responses
-                    .consumeEach {
-                        println("Async response from server = ${it.result}")
-                        delay(1_000)
-                    }
-            }
-
-            sender.join()
-            receiver.join()
-
-            client.shutdownChannel()
+            bidirectionalCall.requests.close()
         }
+
+        launch {
+            for (resp in bidirectionalCall.responses) {
+                println("Async response from server = ${resp.result}")
+                delay(Random.nextLong(1000))
+            }
+        }
+    }
 }

@@ -8,7 +8,6 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
         val reply = HiResponse.newBuilder().apply {
             result = """
                 |Hi there! You queried: '${request.query}'
-                |
                 |  with tags: '${request.tagsList.joinToString(", ")}'
                 |  and flags: '${request.flagsMap.map { "${it.key} = ${it.value}" }.joinToString(", ")}'
                 """.trimMargin()
@@ -46,7 +45,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
         }
 
-    override fun hiThereWithManyReponses(request: HiRequest?, responseObserver: StreamObserver<HiResponse>?) {
+    override fun hiThereWithManyResponses(request: HiRequest?, responseObserver: StreamObserver<HiResponse>?) {
         repeat(5) {
             val reply =
                 HiResponse.newBuilder()
@@ -57,10 +56,10 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
         responseObserver?.onCompleted()
     }
 
-    override fun hiThereWithManyRequestsAndManyReponses(responseObserver: StreamObserver<HiResponse>) =
+    override fun hiThereWithManyRequestsAndManyResponses(responseObserver: StreamObserver<HiResponse>) =
         object : StreamObserver<HiRequest> {
             override fun onNext(request: HiRequest) {
-                repeat(5) {
+                repeat(3) {
                     val reply =
                         HiResponse
                             .newBuilder()
@@ -71,7 +70,7 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
 
             override fun onError(t: Throwable) {
-                println("Encountered error in hiThereWithManyRequestsAndManyReponses()")
+                println("Encountered error in hiThereWithManyRequestsAndManyResponses()")
                 t.printStackTrace()
             }
 
