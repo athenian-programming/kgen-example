@@ -5,18 +5,17 @@ import io.grpc.stub.StreamObserver
 class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
 
     override fun hiThere(request: HiRequest, responseObserver: StreamObserver<HiResponse>) {
-        val reply = HiResponse.newBuilder().apply {
-            result = """
-                |Hi there! You queried: '${request.query}'
-                |  with tags: '${request.tagsList.joinToString(", ")}'
-                |  and flags: '${request.flagsMap.map { "${it.key} = ${it.value}" }.joinToString(", ")}'
-                """.trimMargin()
-        }.build()
-
-        responseObserver.apply {
-            onNext(reply)
-            onCompleted()
-        }
+        responseObserver
+            .apply {
+                val arg = """
+                    Hello! You queried: '${request.query}'
+                        with tags: '${request.tagsList.joinToString(", ")}'
+                        and flags: '${request.flagsMap.map { "${it.key} = ${it.value}" }.joinToString(", ")}'
+                    """.trimIndent()
+                val response = HiResponse.newBuilder().apply { result = arg }.build()
+                onNext(response)
+                onCompleted()
+            }
     }
 
     override fun hiThereWithManyRequests(responseObserver: StreamObserver<HiResponse>?) =
@@ -33,13 +32,11 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
             }
 
             override fun onCompleted() {
-                val msg =
-                    HiResponse.newBuilder()
-                        .apply { result = "Hello ${names.joinToString(", ")}" }
-                        .build()
                 responseObserver
                     ?.apply {
-                        onNext(msg)
+                        val arg = "Hello ${names.joinToString(", ")}"
+                        val response = HiResponse.newBuilder().apply { result = arg }.build()
+                        onNext(response)
                         onCompleted()
                     }
             }
@@ -47,11 +44,9 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
 
     override fun hiThereWithManyResponses(request: HiRequest?, responseObserver: StreamObserver<HiResponse>?) {
         repeat(5) {
-            val reply =
-                HiResponse.newBuilder()
-                    .apply { result = "Hello ${request?.query ?: "Missing"} [$it]" }
-                    .build()
-            responseObserver?.onNext(reply)
+            val arg = "Hello ${request?.query ?: "Missing"} [$it]"
+            val response = HiResponse.newBuilder().apply { result = arg }.build()
+            responseObserver?.onNext(response)
         }
         responseObserver?.onCompleted()
     }
@@ -60,12 +55,9 @@ class HelloServiceImpl : HelloServiceGrpc.HelloServiceImplBase() {
         object : StreamObserver<HiRequest> {
             override fun onNext(request: HiRequest) {
                 repeat(3) {
-                    val reply =
-                        HiResponse
-                            .newBuilder()
-                            .apply { result = "Hello ${request.query} [$it]" }
-                            .build()
-                    responseObserver.onNext(reply)
+                    val arg = "Hello ${request.query} [$it]"
+                    val response = HiResponse.newBuilder().apply { result = arg }.build()
+                    responseObserver.onNext(response)
                 }
             }
 

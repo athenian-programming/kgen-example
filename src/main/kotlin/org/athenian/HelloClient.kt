@@ -27,58 +27,51 @@ fun main() {
     exitProcess(1)
 }
 
-fun syncClient(client: HelloServiceClient) {
-
+fun syncClient(client: HelloServiceClient) =
     runBlocking {
-        val syncResponse =
-            client.hiThere(
-                hiRequest {
-                    query = "Hello!"
-                    tags = listOf("greeting", "salutation")
-                    flags = mapOf("hello" to "hi", "later" to "bye")
-                })
-        println("Sync response was: ${syncResponse.result}")
-    }
-}
+        val request = hiRequest {
+            query = "Hello!"
+            tags = listOf("greeting", "salutation")
+            flags = mapOf("hello" to "hi", "later" to "bye")
+        }
 
-fun streamingClient(client: HelloServiceClient) {
+        val response = client.hiThere(request)
+        println("Sync response was: ${response.result}")
+    }
+
+fun streamingClient(client: HelloServiceClient) =
     runBlocking {
         val streamingCall = client.hiThereWithManyRequests()
 
         launch {
             repeat(5) {
-                streamingCall.requests.send(hiRequest { query = "Hello Again! $it" })
+                val request = hiRequest { query = "Hello Again! $it" }
+                streamingCall.requests.send(request)
             }
             streamingCall.requests.close()
         }
 
-        val result = streamingCall.response.await()
-        println("Streaming Client result = ${result.result}")
+        val response = streamingCall.response.await()
+        println("Streaming Client result = ${response.result}")
     }
-}
 
-fun streamingServer(client: HelloServiceClient) {
+fun streamingServer(client: HelloServiceClient) =
     runBlocking {
-        val streamingServerCall = client.hiThereWithManyResponses(hiRequest { query = "Bill" })
-        for (resp in streamingServerCall.responses)
-            println("Streaming Server result = ${resp.result}")
+        val request = hiRequest { query = "Bill" }
+        val streamingServerCall = client.hiThereWithManyResponses(request)
+        for (response in streamingServerCall.responses)
+            println("Streaming Server result = ${response.result}")
     }
-}
 
-fun bidirectionalService(client: HelloServiceClient) {
+fun bidirectionalService(client: HelloServiceClient) =
     runBlocking {
-
         val bidirectionalCall = client.hiThereWithManyRequestsAndManyResponses()
 
         launch {
             repeat(5) {
                 val s = "Mary $it"
-                bidirectionalCall.requests
-                    .send(
-                        hiRequest {
-                            query = s
-                        }
-                    )
+                val request = hiRequest { query = s }
+                bidirectionalCall.requests.send(request)
                 println("Async client sent $s")
                 delay(Random.nextLong(1000))
             }
@@ -86,10 +79,9 @@ fun bidirectionalService(client: HelloServiceClient) {
         }
 
         launch {
-            for (resp in bidirectionalCall.responses) {
-                println("Async response from server = ${resp.result}")
+            for (response in bidirectionalCall.responses) {
+                println("Async response from server = ${response.result}")
                 delay(Random.nextLong(1000))
             }
         }
     }
-}

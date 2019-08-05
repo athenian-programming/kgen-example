@@ -6,10 +6,11 @@ import io.grpc.protobuf.services.ProtoReflectionService
 import java.io.IOException
 
 fun main() {
-    HelloServer().apply {
-        start()
-        server?.awaitTermination()
-    }
+    HelloServer()
+        .apply {
+            start()
+            server?.awaitTermination()
+        }
 }
 
 class HelloServer(private val port: Int = 8080) {
