@@ -29,11 +29,12 @@ fun main() {
 
 fun syncClient(client: HelloServiceClient) =
     runBlocking {
-        val request = hiRequest {
-            query = "Hello!"
-            tags = listOf("greeting", "salutation")
-            flags = mapOf("hello" to "hi", "later" to "bye")
-        }
+        val request =
+            hiRequest {
+                query = "Hello!"
+                tags = listOf("greeting", "salutation")
+                flags = mapOf("hello" to "hi", "later" to "bye")
+            }
 
         val response = client.hiThere(request)
         println("Sync response was: ${response.result}")
@@ -41,17 +42,17 @@ fun syncClient(client: HelloServiceClient) =
 
 fun streamingClient(client: HelloServiceClient) =
     runBlocking {
-        val streamingCall = client.hiThereWithManyRequests()
+        val clientStreamingCall = client.hiThereWithManyRequests()
 
         launch {
             repeat(5) {
                 val request = hiRequest { query = "Hello Again! $it" }
-                streamingCall.requests.send(request)
+                clientStreamingCall.requests.send(request)
             }
-            streamingCall.requests.close()
+            clientStreamingCall.requests.close()
         }
 
-        val response = streamingCall.response.await()
+        val response = clientStreamingCall.response.await()
         println("Streaming Client result = ${response.result}")
     }
 
@@ -65,21 +66,21 @@ fun streamingServer(client: HelloServiceClient) =
 
 fun bidirectionalService(client: HelloServiceClient) =
     runBlocking {
-        val bidirectionalCall = client.hiThereWithManyRequestsAndManyResponses()
+        val streamingCall = client.hiThereWithManyRequestsAndManyResponses()
 
         launch {
             repeat(5) {
                 val s = "Mary $it"
                 val request = hiRequest { query = s }
-                bidirectionalCall.requests.send(request)
+                streamingCall.requests.send(request)
                 println("Async client sent $s")
                 delay(Random.nextLong(1000))
             }
-            bidirectionalCall.requests.close()
+            streamingCall.requests.close()
         }
 
         launch {
-            for (response in bidirectionalCall.responses) {
+            for (response in streamingCall.responses) {
                 println("Async response from server = ${response.result}")
                 delay(Random.nextLong(1000))
             }
