@@ -74,7 +74,7 @@ fun bidirectionalService(client: HelloServiceClient) =
                 val request = hiRequest { query = s }
                 streamingCall.requests.send(request)
                 println("Async client sent $s")
-                delay(Random.nextLong(1000))
+                delay(Random.nextLong(1_000))
             }
             streamingCall.requests.close()
         }
@@ -82,7 +82,7 @@ fun bidirectionalService(client: HelloServiceClient) =
         launch {
             for (response in streamingCall.responses) {
                 println("Async response from server = ${response.result}")
-                delay(Random.nextLong(1000))
+                delay(Random.nextLong(1_000))
             }
         }
     }

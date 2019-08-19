@@ -30,7 +30,7 @@ class HelloServer(private val port: Int = 8080) {
         Runtime.getRuntime().addShutdownHook(object : Thread() {
             override fun run() {
                 System.err.println("Shutting down gRPC server...")
-                this@HelloServer.server?.shutdown()
+                server?.shutdown()
                 System.err.println("Server shut down.")
             }
         })
