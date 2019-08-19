@@ -19,7 +19,7 @@ repositories {
 }
 
 def grpcVersion = '1.23.0'
-def protocVersion = '3.9.1'
+def protocVersion = '3.9.0'
 def junitVersion = '4.12'
 def kgaxVersion = '0.6.0'
 
@@ -31,7 +31,7 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation "io.grpc:grpc-services:${grpcVersion}"
 
-    implementation "com.github.googleapis.gax-kotlin:kgax-grpc:$kgaxVersion"
+    implementation "com.github.googleapis.gax-kotlin:kgax-grpc:${kgaxVersion}"
 
     testImplementation "junit:junit:${junitVersion}"
     testCompile "junit:junit:${junitVersion}"
