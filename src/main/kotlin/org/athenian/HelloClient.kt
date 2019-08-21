@@ -9,16 +9,15 @@ import kotlin.system.exitProcess
 
 fun main() {
     try {
-        val client =
-            HelloServiceClient.create(
-                channel = ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext().build()
-            )
+        HelloServiceClient.create(channel = ManagedChannelBuilder.forAddress("localhost", 50051).usePlaintext().build())
+            .also { client ->
+                syncClient(client)
+                streamingClient(client)
+                streamingServer(client)
+                bidirectionalService(client)
 
-        syncClient(client)
-        streamingClient(client)
-        streamingServer(client)
-        bidirectionalService(client)
-        client.shutdownChannel()
+                client.shutdownChannel()
+            }
 
         exitProcess(0)
     } catch (t: Throwable) {
@@ -42,47 +41,53 @@ fun syncClient(client: HelloServiceClient) =
 
 fun streamingClient(client: HelloServiceClient) =
     runBlocking {
-        val clientStreamingCall = client.hiThereWithManyRequests()
+        client.hiThereWithManyRequests()
+            .also { call ->
 
-        launch {
-            repeat(5) {
-                val request = hiRequest { query = "Hello Again! $it" }
-                clientStreamingCall.requests.send(request)
+                launch {
+                    repeat(5) {
+                        val request = hiRequest { query = "Hello Again! $it" }
+                        call.requests.send(request)
+                    }
+                    call.requests.close()
+                }
+
+                val response = call.response.await()
+                println("Streaming Client result = ${response.result}")
             }
-            clientStreamingCall.requests.close()
-        }
-
-        val response = clientStreamingCall.response.await()
-        println("Streaming Client result = ${response.result}")
     }
 
 fun streamingServer(client: HelloServiceClient) =
     runBlocking {
         val request = hiRequest { query = "Bill" }
-        val streamingServerCall = client.hiThereWithManyResponses(request)
-        for (response in streamingServerCall.responses)
-            println("Streaming Server result = ${response.result}")
+        client.hiThereWithManyResponses(request)
+            .also { call ->
+                for (response in call.responses)
+                    println("Streaming Server result = ${response.result}")
+            }
     }
 
 fun bidirectionalService(client: HelloServiceClient) =
     runBlocking {
-        val streamingCall = client.hiThereWithManyRequestsAndManyResponses()
+        client.hiThereWithManyRequestsAndManyResponses()
+            .also { call ->
 
-        launch {
-            repeat(5) {
-                val s = "Mary $it"
-                val request = hiRequest { query = s }
-                streamingCall.requests.send(request)
-                println("Async client sent $s")
-                delay(Random.nextLong(1_000))
-            }
-            streamingCall.requests.close()
-        }
+                launch {
+                    repeat(5) {
+                        val s = "Mary $it"
+                        val request = hiRequest { query = s }
+                        call.requests.send(request)
+                        println("Async client sent $s")
+                        delay(Random.nextLong(1_000))
+                    }
+                    call.requests.close()
+                }
 
-        launch {
-            for (response in streamingCall.responses) {
-                println("Async response from server = ${response.result}")
-                delay(Random.nextLong(1_000))
+                launch {
+                    for (response in call.responses) {
+                        println("Async response from server = ${response.result}")
+                        delay(Random.nextLong(1_000))
+                    }
+                }
             }
-        }
     }

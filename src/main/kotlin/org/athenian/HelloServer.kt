@@ -13,7 +13,7 @@ fun main() {
         }
 }
 
-class HelloServer(private val port: Int = 8080) {
+class HelloServer(private val port: Int = 50051) {
 
     var server: Server? = null
 
