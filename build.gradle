@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.3.41'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
     id "com.google.protobuf" version "0.8.10"
     id "com.github.ben-manes.versions" version "0.22.0"
 }
@@ -12,20 +12,20 @@ sourceCompatibility = 1.8
 
 repositories {
     maven { url 'https://jitpack.io' }
-    maven { // The google mirror is less flaky than mavenCentral()
-        url "https://maven-central.storage-download.googleapis.com/repos/central/data/"
-    }
+    maven { url "https://maven-central.storage-download.googleapis.com/repos/central/data/" }
     mavenCentral()
+    mavenLocal()
 }
 
 def kgaxVersion = '0.6.0'
-def coroutinesVersion = '1.2.2'
+def kotlinVersion = '1.3.50'
+def coroutinesVersion = '1.3.0'
 def grpcVersion = '1.23.0'
 def protocVersion = '3.9.1'
 def junitVersion = '4.12'
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:${coroutinesVersion}"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${coroutinesVersion}"
@@ -46,7 +46,6 @@ dependencies {
 sourceSets {
     main {
         java {
-            srcDirs 'src/main/java'
             srcDirs 'src/main/kotlin'
             srcDirs 'build/generated/source/proto/main/grpc'
             srcDirs 'build/generated/source/proto/main/java'
@@ -63,7 +62,7 @@ protobuf {
     plugins {
         grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" }
 
-        client { artifact = 'com.github.googleapis:gapic-generator-kotlin:master-SNAPSHOT:core@jar' }
+        client { artifact = "com.github.googleapis:gapic-generator-kotlin:${kgaxVersion}:core@jar" }
     }
 
     generateProtoTasks {
