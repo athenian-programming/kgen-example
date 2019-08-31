@@ -60,11 +60,12 @@ fun streamingClient(client: HelloServiceClient) =
 fun streamingServer(client: HelloServiceClient) =
     runBlocking {
         val request = hiRequest { query = "Bill" }
-        client.hiThereWithManyResponses(request)
-            .also { call ->
-                for (response in call.responses)
-                    println("Streaming Server result = ${response.result}")
-            }
+        val replies = client.hiThereWithManyResponses(request).responses
+
+        println("Streaming Server results:")
+        for (reply in replies)
+            println(reply.result)
+        println()
     }
 
 fun bidirectionalService(client: HelloServiceClient) =
